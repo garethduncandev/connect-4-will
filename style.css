@@ -52,10 +52,12 @@ h1 {
   text-align: center;
 }
 
+/* No grid gap: spacing between holes is built into each cell, so the board
+   frame (drawn per cell) fully covers everything except the circular holes. */
 .board {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 0;
   background: #16335c;
   padding: 10px;
   border-radius: 10px;
@@ -65,22 +67,30 @@ h1 {
   overflow: hidden;
 }
 
-/* Each cell is a fixed dark "hole". The disc sits on top of the hole, and a
-   board-coloured frame (::after) is drawn over everything except the circular
-   hole, so a falling disc is only visible through the holes (like a real
-   Connect 4 board) and the holes never appear to fade or disappear. */
+/* Layer order inside each cell (back to front):
+   1. ::before  - fixed dark background circle (never changes / fades)
+   2. .disc     - the coloured disc (falls in front of the background circle)
+   3. ::after   - blue board frame with a circular cut-out (in front of disc) */
 .cell {
   position: relative;
   aspect-ratio: 1 / 1;
-  background: #0d2240;
   cursor: pointer;
+}
+
+.cell::before {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  background: #0d2240;
+  z-index: 0;
 }
 
 .cell::after {
   content: '';
   position: absolute;
-  inset: -1px;
-  background: radial-gradient(circle closest-side, transparent 97%, #16335c 100%);
+  inset: 0;
+  background: radial-gradient(circle closest-side, transparent 88%, #16335c 89%);
   pointer-events: none;
   z-index: 2;
 }
@@ -90,15 +100,14 @@ h1 {
 }
 
 .disc {
-  position: relative;
+  position: absolute;
+  inset: 6%;
   z-index: 1;
-  width: 100%;
-  height: 100%;
   border-radius: 50%;
   display: block;
 }
 
-/* Empty discs are invisible so the cell's hole shows through unchanged. */
+/* Empty discs are invisible so the background circle shows through. */
 .disc.empty {
   background: transparent;
 }
@@ -111,14 +120,15 @@ h1 {
   background: radial-gradient(circle at 30% 30%, #ffe066, #e0a800);
 }
 
-/* Falling disc: fall duration, bounce height scale with drop height. */
+/* Falling disc: fall duration, bounce height scale with drop height.
+   One cell is ~114% of a disc's height, so --drop cells = --drop * 114%. */
 .disc.drop {
   animation: drop var(--dur, 0.5s) linear both;
 }
 
 @keyframes drop {
   0% {
-    transform: translateY(calc(var(--drop, 1) * -106%));
+    transform: translateY(calc(var(--drop, 1) * -114%));
     animation-timing-function: cubic-bezier(0.5, 0, 1, 0.8);
   }
   65% {
@@ -146,17 +156,6 @@ h1 {
   .disc.drop {
     animation: none;
   }
-}
-
-.disc.flipped {
-  animation: flip 0.6s ease;
-}
-
-@keyframes flip {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(0.3) rotateY(90deg); }
-  60%  { transform: scale(0.3) rotateY(90deg); }
-  100% { transform: scale(1); }
 }
 
 .controls {
