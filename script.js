@@ -176,10 +176,26 @@ function onColumnClick(col) {
   if (lines.length > 0) {
     // Gareth never allows Will to actually complete 4 in a row.
     // The first disc placed in each completed line quietly changes colour.
-    const flipped = lines.map(earliestCell);
-    for (const cell of flipped) {
+    const uniqueFlips = new Map();
+    for (const line of lines) {
+      const cell = earliestCell(line);
+      uniqueFlips.set(`${cell.row},${cell.col}`, cell);
+    }
+    for (const cell of uniqueFlips.values()) {
       board[cell.row][cell.col] = GARETH;
     }
+
+    // Safety net: in case any Will line still exists after first flips,
+    // keep breaking lines until none remain.
+    let guard = 0;
+    while (boardHasLine(WILL) && guard < ROWS * COLS) {
+      guard += 1;
+      const remaining = allLinesForColor(WILL);
+      if (remaining.length === 0) break;
+      const extraFlip = earliestCell(remaining[0]);
+      board[extraFlip.row][extraFlip.col] = GARETH;
+    }
+
     render();
   }
 
@@ -200,13 +216,27 @@ function finishFullBoard() {
   endGame('Gareth wins! 🎉');
 }
 
-function boardHasLine(color) {
+function allLinesForColor(color) {
+  const keys = new Set();
+  const lines = [];
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      if (board[r][c] === color && hasAnyLineThrough(r, c, color)) return true;
+      if (board[r][c] !== color) continue;
+      const through = findLinesThrough(r, c, color);
+      for (const line of through) {
+        const key = line.map(({ row, col }) => `${row},${col}`).join('|');
+        if (!keys.has(key)) {
+          keys.add(key);
+          lines.push(line);
+        }
+      }
     }
   }
-  return false;
+  return lines;
+}
+
+function boardHasLine(color) {
+  return allLinesForColor(color).length > 0;
 }
 
 function garethMove() {
