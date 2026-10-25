@@ -65,35 +65,42 @@ h1 {
   overflow: hidden;
 }
 
+/* Each cell is a fixed dark "hole". The disc sits on top of the hole, and a
+   board-coloured frame (::after) is drawn over everything except the circular
+   hole, so a falling disc is only visible through the holes (like a real
+   Connect 4 board) and the holes never appear to fade or disappear. */
 .cell {
+  position: relative;
   aspect-ratio: 1 / 1;
   background: #0d2240;
-  border-radius: 50%;
   cursor: pointer;
-  transition: background 0.15s;
 }
 
-.cell:hover {
-  background: #123057;
+.cell::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(circle closest-side, transparent 97%, #16335c 100%);
+  pointer-events: none;
+  z-index: 2;
 }
 
 .cell.disabled {
   cursor: default;
 }
 
-.cell.disabled:hover {
-  background: #0d2240;
-}
-
 .disc {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   border-radius: 50%;
   display: block;
 }
 
+/* Empty discs are invisible so the cell's hole shows through unchanged. */
 .disc.empty {
-  background: #0d2240;
+  background: transparent;
 }
 
 .disc.will {
