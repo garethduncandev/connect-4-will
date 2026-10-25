@@ -14,6 +14,19 @@ body {
   align-items: center;
   max-width: 480px;
   width: 100%;
+  /* Prevent tap highlight / text selection / callout on mobile (app only). */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.app * {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 h1 {
@@ -49,6 +62,7 @@ h1 {
   box-shadow: 0 6px 20px rgba(0,0,0,0.4);
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .cell {
@@ -88,6 +102,43 @@ h1 {
 
 .disc.gareth {
   background: radial-gradient(circle at 30% 30%, #ffe066, #e0a800);
+}
+
+/* Falling disc: fall duration, bounce height scale with drop height. */
+.disc.drop {
+  animation: drop var(--dur, 0.5s) linear both;
+}
+
+@keyframes drop {
+  0% {
+    transform: translateY(calc(var(--drop, 1) * -106%));
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.8);
+  }
+  65% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0.2, 0.5, 1);
+  }
+  80% {
+    transform: translateY(calc(var(--bounce, 8%) * -1));
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.8);
+  }
+  92% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0.2, 0.5, 1);
+  }
+  96% {
+    transform: translateY(calc(var(--bounce, 8%) * -0.25));
+    animation-timing-function: ease-in;
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disc.drop {
+    animation: none;
+  }
 }
 
 .disc.flipped {

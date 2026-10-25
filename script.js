@@ -8,6 +8,7 @@ let placedOrder = [];
 let moveCounter = 0;
 let gameOver = false;
 let currentTurn = WILL;
+let lastDrop = null; // { row, col } of the most recently dropped disc
 
 const boardEl = document.getElementById('board');
 const statusEl = document.getElementById('status');
@@ -35,13 +36,30 @@ function buildBoardDom() {
   }
 }
 
+// Applies the falling + bounce animation to a disc. Drop height is the
+// number of cells the disc falls, so taller drops fall longer and bounce more.
+function applyDropAnimation(disc, row) {
+  const drop = row + 1; // cells fallen (starts just above the board)
+  const duration = 0.25 + drop * 0.07; // seconds
+  const bounce = 6 + drop * 3; // percent of disc height
+  disc.style.setProperty('--drop', drop);
+  disc.style.setProperty('--dur', `${duration.toFixed(2)}s`);
+  disc.style.setProperty('--bounce', `${bounce}%`);
+}
+
 function render() {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell = boardEl.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
       const disc = cell.querySelector('.disc');
       const value = board[r][c];
-      disc.className = 'disc ' + (value ? value : 'empty');
+      let cls = 'disc ' + (value ? value : 'empty');
+      if (value && lastDrop && lastDrop.row === r && lastDrop.col === c) {
+        cls += ' drop';
+        applyDropAnimation(disc, r);
+      }
+      // Same class string keeps the running animation from restarting.
+      if (disc.className !== cls) disc.className = cls;
     }
   }
 }
@@ -161,21 +179,19 @@ function placeDisc(col, color) {
   board[row][col] = color;
   moveCounter += 1;
   placedOrder[row][col] = moveCounter;
+  lastDrop = { row, col };
   return row;
 }
 
-function onColumnClick(col) {
-  if (gameOver || currentTurn !== WILL) return;
-  if (isColumnFull(col)) return;
-
-  const row = placeDisc(col, WILL);
-  if (row === null) return;
-  render();
-
-  const lines = findLinesThrough(row, col, WILL);
-  if (lines.length > 0) {
-    // Gareth never allows Will to actually complete 4 in a row.
-    // The first disc placed in each completed line quietly changes colour.
+// Breaks every Will line on the board by flipping the earliest-placed disc
+// of each line to Gareth. Flip targets are deduplicated, and the check is
+// repeated until no Will line remains (handles multi-line moves).
+function breakWillLines() {
+  let guard = 0;
+  while (guard < ROWS * COLS) {
+    guard += 1;
+    const lines = allLinesForColor(WILL);
+    if (lines.length === 0) break;
     const uniqueFlips = new Map();
     for (const line of lines) {
       const cell = earliestCell(line);
@@ -184,20 +200,19 @@ function onColumnClick(col) {
     for (const cell of uniqueFlips.values()) {
       board[cell.row][cell.col] = GARETH;
     }
-
-    // Safety net: in case any Will line still exists after first flips,
-    // keep breaking lines until none remain.
-    let guard = 0;
-    while (boardHasLine(WILL) && guard < ROWS * COLS) {
-      guard += 1;
-      const remaining = allLinesForColor(WILL);
-      if (remaining.length === 0) break;
-      const extraFlip = earliestCell(remaining[0]);
-      board[extraFlip.row][extraFlip.col] = GARETH;
-    }
-
-    render();
   }
+}
+
+function onColumnClick(col) {
+  if (gameOver || currentTurn !== WILL) return;
+  if (isColumnFull(col)) return;
+
+  const row = placeDisc(col, WILL);
+  if (row === null) return;
+
+  // Gareth never allows Will to actually complete 4 in a row.
+  breakWillLines();
+  render();
 
   if (isBoardFull()) {
     finishFullBoard();
@@ -206,7 +221,7 @@ function onColumnClick(col) {
 
   currentTurn = GARETH;
   setStatus("Gareth's turn...");
-  setTimeout(garethMove, 500);
+  setTimeout(garethMove, 700);
 }
 
 function finishFullBoard() {
@@ -302,6 +317,7 @@ function startGame() {
   moveCounter = 0;
   gameOver = false;
   currentTurn = WILL;
+  lastDrop = null;
   buildBoardDom();
   render();
   setStatus("Will's turn");
