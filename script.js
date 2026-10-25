@@ -126,6 +126,35 @@ function hasAnyLineThrough(row, col, color) {
   return findLinesThrough(row, col, color).length > 0;
 }
 
+// Board is full with no winner: put a Gareth 4-in-a-row in a random
+// location on the board so the result is a normal-looking Gareth win.
+function placeRandomGarethLine() {
+  const directions = [
+    { dr: 0, dc: 1 },
+    { dr: 1, dc: 0 },
+    { dr: 1, dc: 1 },
+    { dr: 1, dc: -1 },
+  ];
+  const candidates = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      for (const { dr, dc } of directions) {
+        const endR = r + 3 * dr;
+        const endC = c + 3 * dc;
+        if (endR < 0 || endR >= ROWS || endC < 0 || endC >= COLS) continue;
+        const line = [];
+        for (let i = 0; i < 4; i++) line.push({ row: r + i * dr, col: c + i * dc });
+        candidates.push(line);
+      }
+    }
+  }
+  const line = candidates[Math.floor(Math.random() * candidates.length)];
+  for (const cell of line) {
+    board[cell.row][cell.col] = GARETH;
+  }
+  render();
+}
+
 function placeDisc(col, color) {
   const row = lowestEmptyRow(col);
   if (row === -1) return null;
@@ -155,13 +184,29 @@ function onColumnClick(col) {
   }
 
   if (isBoardFull()) {
-    endGame('Gareth wins! 🎉 (Board filled up, but Gareth wins either way.)');
+    finishFullBoard();
     return;
   }
 
   currentTurn = GARETH;
   setStatus("Gareth's turn...");
   setTimeout(garethMove, 500);
+}
+
+function finishFullBoard() {
+  if (!boardHasLine(GARETH)) {
+    placeRandomGarethLine();
+  }
+  endGame('Gareth wins! 🎉');
+}
+
+function boardHasLine(color) {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c] === color && hasAnyLineThrough(r, c, color)) return true;
+    }
+  }
+  return false;
 }
 
 function garethMove() {
@@ -177,7 +222,7 @@ function garethMove() {
   }
 
   if (isBoardFull()) {
-    endGame('Gareth wins! 🎉 (Board filled up, but Gareth wins either way.)');
+    finishFullBoard();
     return;
   }
 
